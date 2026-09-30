@@ -311,6 +311,11 @@ PERMISSIONS = [
     ("announcements.write", "维护公告", "announcements", "write"),
     ("audit.read", "查看审计", "audit", "read"),
     ("jobs.run", "执行后台任务", "jobs", "run"),
+    ("eco.read", "查看生态保留台账", "ecology", "read"),
+    ("eco.register", "登记生态保留现场", "ecology", "register"),
+    ("eco.decide", "出具保留决定", "ecology", "decide"),
+    ("eco.review", "追加生态复查结论", "ecology", "review"),
+    ("eco.emergency", "紧急处置与补录", "ecology", "emergency"),
 ]
 
 
@@ -380,10 +385,32 @@ def init_db() -> None:
             "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('auditor','审计查看员','只读查看业务与审计记录',1,?,?)",
             (now, now),
         )
+        connection.execute(
+            "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('eco_manager','生态保留授权人员','可登记现场并出具保留、调整或移除决定',1,?,?)",
+            (now, now),
+        )
         administrator = connection.execute("SELECT id FROM roles WHERE code='administrator'").fetchone()[0]
         connection.execute(
             "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) SELECT ?,id,? FROM permissions",
             (administrator, now),
+        )
+        clerk = connection.execute("SELECT id FROM roles WHERE code='clerk'").fetchone()[0]
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code IN ('eco.read','eco.register','eco.review','eco.emergency')",
+            (clerk, now),
+        )
+        auditor = connection.execute("SELECT id FROM roles WHERE code='auditor'").fetchone()[0]
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code='eco.read'",
+            (auditor, now),
+        )
+        eco_manager = connection.execute("SELECT id FROM roles WHERE code='eco_manager'").fetchone()[0]
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code LIKE 'eco.%'",
+            (eco_manager, now),
         )
 
 
