@@ -26,6 +26,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8432
 
 健康接口为 `GET /api/system/health`。所有状态变化都写入 SQLite，并由应用内事务保证关联记录的一致性。
 
+## 栖息地保留决策台账
+
+公园落叶、枝堆可能是刺猬、昆虫及小型动物的越冬栖所。台账服务（`/api/habitat`）支持管护班组把"看起来杂乱"的现场登记为案件，由授权人员引用当时的生态依据决定保留、调整或移除，后续复查只能追加结论，紧急安全处置可先执行再限期补录。
+
+- **登记合并**：`POST /api/habitat/cases/registrations` 登记照片摘要、堆放位置、季节风险、观察物种与公众反馈；同一地点（名称归一化）+ 同一生态周期（如 `2026-winter`）的重复登记自动并入同一案件，历史登记行不覆盖。
+- **授权决定**：`POST /api/habitat/cases/{id}/decision` 需要 `habitat.decide` 权限，请求体必须携带 `eco_basis`（依据类型、名称、条款、引用要点与现场佐证），决定落库后追加为新序号，旧决定原样保留。`adjust` 必须填写具体措施。
+- **复查/投诉**：`POST /api/habitat/cases/{id}/followups` 需要 `habitat.review` 权限；复查（`review`）只追加结论，投诉（`complaint`）使案件进入 `under_review` 等待重新决定。
+- **紧急处置**：`POST /api/habitat/cases/{id}/emergencies` 需要 `habitat.emergency` 权限，记录实际处置时间、现场责任人、补录期限（默认 24 小时）与补录责任人；超过期限补录的案件标记为 `makeup_overdue`，在期限内为 `emergency_disposed`。
+- **查询与权限**：`GET /api/habitat/cases`、`GET /api/habitat/cases/{id}` 需要 `habitat.read`；越权返回 403 并写入 `outcome=denied` 审计事件，全部成功操作写入对应 `habitat.*` 审计事件。
+
+
 ## 测试
 
 ```bash

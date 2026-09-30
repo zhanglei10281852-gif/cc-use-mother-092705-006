@@ -311,6 +311,11 @@ PERMISSIONS = [
     ("announcements.write", "维护公告", "announcements", "write"),
     ("audit.read", "查看审计", "audit", "read"),
     ("jobs.run", "执行后台任务", "jobs", "run"),
+    ("habitat.read", "查看栖息地台账", "habitat", "read"),
+    ("habitat.register", "登记栖息地现场信息", "habitat", "register"),
+    ("habitat.decide", "审批保留决定", "habitat", "decide"),
+    ("habitat.review", "复查与受理投诉", "habitat", "review"),
+    ("habitat.emergency", "补录紧急安全处置", "habitat", "emergency"),
 ]
 
 
@@ -380,10 +385,20 @@ def init_db() -> None:
             "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('auditor','审计查看员','只读查看业务与审计记录',1,?,?)",
             (now, now),
         )
+        connection.execute(
+            "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('habitat_officer','栖息地管护授权人','可登记、审批保留决定、复查并补录紧急处置',1,?,?)",
+            (now, now),
+        )
         administrator = connection.execute("SELECT id FROM roles WHERE code='administrator'").fetchone()[0]
         connection.execute(
             "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) SELECT ?,id,? FROM permissions",
             (administrator, now),
+        )
+        officer = connection.execute("SELECT id FROM roles WHERE code='habitat_officer'").fetchone()[0]
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code LIKE 'habitat.%'",
+            (officer, now),
         )
 
 
